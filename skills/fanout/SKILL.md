@@ -1,62 +1,60 @@
 ---
 name: fanout
-description: Run independent subtasks in parallel — one git worktree and one implementation sub-agent per task, each opening its own PR — then cross-review every PR. foreman never merges; the human does.
+description: Run a set of dependent subtasks across parallel workers - build the task graph, dispatch only the ready frontier, integrate. Use for work with more than one piece, especially when pieces block each other.
 ---
 
-# fanout — safe parallel execution
+# fanout - a task graph, not a flat list
 
-Use ONLY for subtasks that are parallel-safe (no shared files, no ordering
-dependency).
+Parallelism is only safe where tasks are independent. Model the work as a graph
+and dispatch the frontier; do not dump a flat list at once.
 
 ## Procedure
-1. Per task, create an isolated worktree:
-   `sys_os_shell("git worktree add .worktrees/<task_id> -b foreman/<task_id>")`.
-   Record the worktree path + branch in the registry
-   (`.foreman/registry.json`).
-2. Dispatch one implementation sub-agent per task, scoped to its worktree:
+
+1. **Split into tracer-bullet slices.** Each slice cuts a narrow but COMPLETE
+   path through every layer (schema, logic, tests) and is verifiable on its own,
+   sized to fit one fresh context. Prefactoring that makes the real change easy
+   goes first, as its own slice.
+2. **Declare each task's blocking edges** - the tasks that must land before it
+   can start. A task with no blockers is ready now.
+   Record `{task_id, title, worktree, branch, blocked_by, conversation_id,
+   pr_url}` in `.foreman/registry.json`.
+3. **Dispatch only the ready frontier.** For each ready task, create its
+   worktree and dispatch one implementer:
+   `sys_os_shell("git worktree add .worktrees/<task_id> -b foreman/<task_id>")`
    `sys_session_send(agent="claude_code"|"codex", title="<task_slug>",
-   args={purpose: "implement", input: "<task + acceptance contract +
-   worktree path>"})`. Use a short task-based title such as `auth-refactor` or
-   `fix-sse-error`, never the raw vendor name. State the scope and that it must
-   work only inside `.worktrees/<task_id>`. The worker drives the task to green
-   and opens its OWN PR for the branch. Every commit the worker authors must
-   end with a blank line followed by the exact co-sign trailer as its final
-   line — `Co-authored-by: omnigent <noreply@omnigent.ai>`.
-   For a long-running `claude_code` or `codex` implementation with an explicit
-   completion condition, the `input` may instead be one standalone
-   `/goal <condition>` command containing that same task, worktree, acceptance
-   contract, green gates, and PR requirement.
-   Do not use child goal mode for other workers or non-implementation purposes.
-   Record each handle's `conversation_id`
-   in the registry. Emit the worktree + `sys_session_send` tool calls in THIS
-   turn — never end a turn having only said you will dispatch; the dispatch
-   calls and their announcement go in the same turn. Dispatch the whole
-   parallel-safe set, THEN (and only then) END YOUR TURN. Do not poll.
-3. Each sub-agent runs autonomously and notifies you through the inbox when it
-   finishes. Collect its structured result with `sys_read_inbox` and record the
-   PR URL in the registry. If the inbox result is empty/unclear, inspect that
-   worker conversation with `sys_session_get_history` before deciding what to do
-   next.
-4. Send each finished task's PR through `cross-review`.
-5. foreman does NOT merge — the PR is the deliverable. When cross-review passes,
-   the task is done: mark it ready in the registry with its PR URL and leave it
-   for the human to review and merge. Never run `git merge` / `gh pr merge`.
-6. Remove a finished worktree (`git worktree remove`) only once its PR is open
-   and review is clean — the branch lives on the remote, so the worktree is
-   disposable. Don't remove a worktree that still has open fix-tasks.
+   args={purpose: "implement", input: "<task + acceptance contract + worktree
+   path>"})`
+   Use a task-based title (`auth-refactor`, `fix-sse-error`), never a vendor
+   name. State that the worker must stay inside `.worktrees/<task_id>`, drive to
+   green, and open its OWN PR. Every commit it authors ends with the exact
+   co-sign trailer `Co-authored-by: omnigent <noreply@omnigent.ai>`.
+   For a long-running `claude_code` or `codex` task with an explicit completion
+   condition, `input` may be one standalone `/goal <condition>` holding the same
+   task, worktree, contract, gates, and PR requirement. Never for `flash`, and
+   never for review/explore.
+4. **Respect the per-turn cap** (policy-enforced). More ready tasks than the cap
+   => dispatch in waves and let the running batch finish before starting more.
+   A task whose blockers have not landed is NOT ready - hold it.
+5. **Collect and close out.** Each worker notifies you through the inbox; record
+   its PR URL, then send the PR through `cross-review`. Only when BOTH axes pass
+   do you mark the task done - and never merge.
+6. **Unblock.** When a task lands, mark it landed and dispatch the tasks whose
+   blocking edges are now satisfied. Remove a finished worktree (`git worktree
+   remove`) only once its PR is open and review is clean; the branch lives on the
+   remote.
+7. **Integrate.** When the slice set is complete, verify the combined result on
+   the integration point (the base branch or an integration branch) - the whole
+   is not green just because every slice was.
 
 ## Notes
-- Respect the per-turn dispatch cap (enforced by policy). More tasks than the
-  cap → dispatch in waves (let the running batch finish before dispatching more).
-- The human can open any sub-agent in the UI's Subagents panel and read its
-  conversation while it runs.
-- If a running worker is wrong, runaway, superseded, or no longer useful, call
-  `sys_cancel_task` with `task_id` set to the recorded `conversation_id` before
-  dispatching a replacement. `claude_code` is hard-stopped; `codex` cancellation
-  is best-effort until its runner-side hard-stop exists.
-- A sub-agent that returns a dark or failing result: don't re-prompt it in a
-  loop — re-dispatch a fresh implementation sub-agent in a clean worktree, or
-  escalate to the user.
-- Because foreman never merges, cross-PR conflicts surface when the human merges,
-  not here. Keeping each parallel task's file scope disjoint is what keeps that
-  rare — honor it.
+
+- Emit the worktree + `sys_session_send` calls in THIS turn, then end it. Do not
+  announce and yield.
+- If a worker is wrong, runaway, or superseded, `sys_cancel_task` with its
+  recorded `conversation_id` before dispatching a replacement. `claude_code` is
+  hard-stopped; `flash` honors the interrupt; `codex` cancellation is
+  best-effort.
+- A dark or failing worker: re-dispatch a FRESH implementer in a clean worktree,
+  or escalate - do not loop on it.
+- Because you never merge, cross-PR conflicts surface when the human merges.
+  Keeping parallel tasks' file scope disjoint is what keeps that rare.

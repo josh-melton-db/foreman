@@ -1,77 +1,72 @@
 ---
 name: cross-review
-description: Verify an implementer's diff with an INDEPENDENT, different-vendor sub-agent (diff plus contract only); turn blocking issues into fix-tasks and loop until clean.
+description: Verify an implementer's diff along two independent axes - Standards (does it follow this repo's rules?) and Spec (does it do what was asked?) - each judged by a different-vendor reviewer, in parallel. Use after any implementation, before the human merges.
 ---
 
-# cross-review — independent verification
+# cross-review - two axes, two vendors
 
-The implementer never signs off on its own work — a different model does, and
-review is a sub-agent that returns a structured report, not a transcript
-anyone needs to read through.
+The implementer never signs off on its own work. Press review along **two
+independent axes**, each run by a DIFFERENT vendor than the implementer, in
+parallel, so neither axis pollutes the other's context.
 
 ## Procedure
-1. Reuse the supplied diff file, or save the task's diff directly with a shell
-   redirect (`gh pr diff <pr> > <absolute shared diff path>` or
-   `git -C .worktrees/<task_id> diff <base-sha>...<head-sha> > <absolute shared diff path>`).
-   Use a unique snapshot outside the implementer's worktree, record its base and
-   head commit SHAs, and leave it unchanged until review finishes. The reviewer
-   must be able to read that path. For a different host or sandbox, transfer the
-   snapshot first or arrange access to both commits so it can compute the diff;
-   never regenerate the diff through model output.
-2. Run the deterministic gates first — tests / lint / typecheck via
-   `sys_os_shell`. If red, re-dispatch the implementer to drive it green first;
-   don't involve the reviewer yet.
-   If a pytest result's count must be recorded or reconciled, collect ground
-   truth with `python -m pytest --collect-only -q <same files>` against the
-   exact file set/command/commit the implementer reported. Never use
-   `grep -c 'def test_'` as a pytest count: it counts functions, not collected
-   cases, and misses parametrized case expansion.
-3. Dispatch a DIFFERENT-vendor sub-agent as reviewer: pick an AVAILABLE worker
-   whose vendor differs from the implementer's — `claude_code`, `codex`, or
-   `flash` (e.g. Claude built it → `codex` or `flash`, and so on). Use a
-   task-based title such as `review-auth-refactor`, never the raw vendor name:
-   `sys_session_send(agent="claude_code"|"codex"|"flash", title="review-<task_slug>",
+
+1. **Pin the fixed point.** Save the diff ONCE, outside the implementer's
+   worktree, and record base/head SHAs:
+   `gh pr diff <pr> > <abs diff path>` or
+   `git -C .worktrees/<task_id> diff <base-sha>...<head-sha> > <abs diff path>`
+   (three-dot, so you compare against the merge base). Confirm the ref resolves
+   and the diff is non-empty before spawning anyone.
+2. **Run the gates first** - tests / lint / typecheck via `sys_os_shell`. If red,
+   send it back to the implementer; do not spend reviewers on a broken diff.
+3. **Gather each axis's inputs.**
+   - Spec: the task's acceptance contract, or the `SPEC.md` the work came from.
+   - Standards: every file that documents how code is written here
+     (`CONTRIBUTING.md`, `CODING_STANDARDS.md`, lint config), plus the smell
+     baseline below.
+4. **Dispatch BOTH reviewers in parallel**, each tagged and each a different
+   vendor from the implementer:
+   `sys_session_send(agent="claude_code"|"codex"|"flash", title="review-standards-<slug>",
    args={purpose: "review", vendor: "<reviewer vendor token>",
-   implemented_by: "<implementer vendor token>", input: "Read the diff at <absolute shared diff path>
-   (base <base-sha>, head <head-sha>). <The acceptance contract>.
-   Review ONLY against the contract. Report blocking / non-blocking /
-   suggestions. Do not edit code. If the snapshot is inaccessible, report that
-   failure rather than reviewing from a summary."})`. Pass the snapshot path,
-   not its contents; do NOT point the reviewer at the implementer's worktree.
-   Prepare the snapshot and emit the
-   `sys_session_send` call in the SAME turn you decide to review — never end a
-   turn having only announced "I'll load cross-review and fetch the diff" with
-   no tool call (that dropped turn stalls the run; nothing dispatches and no
-   inbox wake arrives). Once the reviewer dispatch is in flight, end your turn;
-   collect the inbox-delivered structured report with `sys_read_inbox` when it
-   returns. Use `sys_session_get_history` only to debug an empty or unclear
-   review result.
-4. The reviewer SURFACES issues; it does not fix them.
-5. For each **blocking** issue: add a fix-task to the registry scoped to the
-   same worktree, and send the concrete fixes back to the SAME implementer
-   conversation via `sys_session_send` — reuse the original implementer's
-   `agent` + `title` (or address it by `session_id`) with
-   `purpose: "implement"`, so the worker keeps its worktree/branch context and
-   updates its existing PR. A new title would spawn a fresh worker with no
-   memory of the task. Then loop to step 1.
-6. When gates are green AND there are zero blocking issues, the PR passes
-   review — mark it ready in the registry (with its PR URL) and leave it for
-   the human to merge. foreman does NOT merge it.
-7. If the contract can't be satisfied after a few loops, stop and escalate to
-   the user with specifics.
+   implemented_by: "<implementer vendor token>", input: "..."})`
+   and the same with `title="review-spec-<slug>"`. The `cross_vendor_review_guard`
+   policy DENIES a review whose `vendor` equals `implemented_by`, or that omits
+   `implemented_by`.
+   Give each ONLY the snapshot path plus its inputs - never the implementer's
+   worktree or transcript. Instruct: report blocking / non-blocking /
+   suggestions, each with file:line evidence; do not edit code.
+5. **Aggregate.** A blocking issue from either axis becomes a fix-task on the
+   registry scoped to the same worktree, sent back to the SAME implementer
+   conversation (`purpose: "implement"`, reusing its title) so it keeps its
+   branch and PR. Then loop to step 1.
+6. Green gates + zero blocking issues on both axes => the PR is ready for the
+   human to merge. You do NOT merge it.
+
+## Standards axis - smell baseline
+
+A fixed set of Fowler smells (_Refactoring_, ch.3) applies even when the repo
+documents nothing. Two rules bind it: **a documented repo standard always wins**
+(suppress the smell where the repo endorses it), and **every smell is a
+judgement call** - name it as "possible Feature Envy", not a violation. Skip
+anything tooling already enforces.
+
+- **Mysterious Name** - the name does not reveal what it does or holds -> rename; if no honest name exists, the design is murky.
+- **Duplicated Code** - the same logic shape in more than one hunk -> extract the shared shape.
+- **Feature Envy** - a method reaches into another object's data more than its own -> move it onto that data.
+- **Data Clumps** - the same few fields keep travelling together -> bundle them into a type.
+- **Primitive Obsession** - a primitive standing in for a domain concept -> give the concept a type.
+- **Repeated Switches** - the same switch on the same type recurs -> polymorphism, or one shared map.
+- **Shotgun Surgery** - one logical change forces scattered edits -> gather what changes together.
+- **Divergent Change** - one module edited for several unrelated reasons -> split by reason.
+- **Speculative Generality** - abstraction for needs the spec lacks -> delete it.
+- **Message Chains** - long `a.b().c().d()` navigation -> hide the walk behind one method.
+- **Middle Man** - a class that mostly delegates -> cut it.
+- **Refused Bequest** - a subclass ignoring most of what it inherits -> composition.
 
 ## Notes
-- Cross-review requires a reviewer from a DIFFERENT vendor than the implementer,
-  so it needs at least two AVAILABLE workers (per foreman's roster preflight). If
-  only one worker — or only one vendor that can review this implementer's PR —
-  is available on the machine, you CANNOT run independent cross-vendor review:
-  don't dispatch a reviewer that can't boot, say so explicitly, and pull in the
-  human at the plan gate.
-- Give the reviewer ONLY the diff snapshot + contract — never the implementer's
-  transcript or worktree. The cross-vendor independence is the whole point.
-- Review is a coding sub-agent (`claude_code`/`codex`/`flash`) dispatched with
-  `purpose: "review"` — a DIFFERENT vendor from the one that built the diff. It
-  reports issues and never edits; only the implementer opens a PR, so a stray
-  reviewer edit never reaches the deliverable.
-- Non-blocking issues / suggestions go in the registry as follow-ups; they
-  don't block the PR.
+
+- Cross-review needs at least two AVAILABLE workers (roster preflight). With one
+  vendor available you cannot run independent review - say so at the plan gate.
+- Only the implementer opens or updates a PR. A reviewer's stray edit never
+  reaches the deliverable because the reviewer is never given write access to
+  the worktree.

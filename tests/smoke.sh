@@ -61,6 +61,22 @@ for name, (harness, model) in {
     check(f"{name} harness", w.executor.config.get("harness"), harness)
     check(f"{name} model", w.executor.model, model)
 
+# Every bundled skill is present with name+description frontmatter.
+expected_skills = [
+    "align", "cross-review", "diagnose", "fanout", "glossary", "investigate",
+    "pr", "retro", "tdd", "wizard", "writing-for-agents",
+]
+for skill in expected_skills:
+    md = root / "skills" / skill / "SKILL.md"
+    if not md.is_file():
+        check(f"skill {skill}", "missing", "SKILL.md")
+        continue
+    head = md.read_text().splitlines()[:8]
+    well_formed = head[:1] == ["---"] and any(l.startswith("name:") for l in head) and any(
+        l.startswith("description:") for l in head
+    )
+    check(f"skill {skill}", well_formed, True)
+
 sys.exit(0 if ok else 1)
 PY
 
