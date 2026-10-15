@@ -336,15 +336,10 @@ terminals:
 tools:
   # Coding sub-agents — see agents/<dir>/. claude_code and codex are real CLI
   # coding harnesses; flash rides the codex harness on a DeepSeek model. Each
-  # reviews (cross-vendor), and explores. opencode / cursor / hermes / agy are
-  # commented out for now — those harnesses aren't set up on this machine.
+  # implements, reviews (cross-vendor), and explores.
   agents:
     - claude_code
     - codex
-    # - opencode
-    # - cursor
-    # - hermes
-    # - agy
     - flash
 
 # Mechanism-layer enforcement — runner-side tool gate, no server change.
