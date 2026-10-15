@@ -27,11 +27,8 @@ parallel, so neither axis pollutes the other's context.
 4. **Dispatch BOTH reviewers in parallel**, each tagged and each a different
    vendor from the implementer:
    `sys_session_send(agent="claude_code"|"codex"|"flash", title="review-standards-<slug>",
-   args={purpose: "review", vendor: "<reviewer vendor token>",
-   implemented_by: "<implementer vendor token>", input: "..."})`
-   and the same with `title="review-spec-<slug>"`. The `cross_vendor_review_guard`
-   policy DENIES a review whose `vendor` equals `implemented_by`, or that omits
-   `implemented_by`.
+   args={purpose: "review", input: "..."})`
+   and the same with `title="review-spec-<slug>"`.
    Give each ONLY the snapshot path plus its inputs - never the implementer's
    worktree or transcript. Instruct: report blocking / non-blocking /
    suggestions, each with file:line evidence; do not edit code.
