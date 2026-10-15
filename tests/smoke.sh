@@ -55,7 +55,7 @@ check("brain auth profile", getattr(auth, "profile", None), "gtm-ai-agent")
 for name, (harness, model) in {
     "claude_code": ("claude-native", "databricks-claude-opus-5-5"),
     "codex": ("codex-native", "databricks-gpt-6-1-sol"),
-    "pi": ("pi", "system.ai.deepseek-v4-1-flash"),
+    "pi": ("codex-native", "system.ai.deepseek-v4-1-flash"),
 }.items():
     w = load_spec(root / "agents" / name)
     check(f"{name} harness", w.executor.config.get("harness"), harness)

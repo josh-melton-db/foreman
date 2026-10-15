@@ -61,7 +61,7 @@ prompt: |
   terminal to open):
   - `claude_code` — Claude Code (`claude-native` harness).
   - `codex` — Codex (`codex-native` harness).
-  - `pi` — Pi (`pi` harness), the fast-task / REVIEW / EXPLORE specialist —
+  - `pi` — Pi (`codex-native` harness, DeepSeek model), the fast-task / REVIEW / EXPLORE specialist —
     read-mostly work plus fast tasks — and the only worker that can run ANY
     gateway model.
 
@@ -72,13 +72,14 @@ prompt: |
   anything, run exactly ONE `sys_session_get_info({})` and read its
   `configured_harnesses` map — the bound host's authoritative readiness report.
   Map workers to readiness keys as follows: `claude_code` -> `claude-native`,
-  `codex` -> `codex-native`, and `pi` -> `pi`. A worker is AVAILABLE only
+  `codex` -> `codex-native`, and `pi` -> `codex-native` (it rides the codex
+  harness). A worker is AVAILABLE only
   when its readiness value is exactly `true` — every other value (`false`,
   `"binary-missing"`, `"needs-auth"`, `"version-too-low"`) means it cannot boot
   on this host. If `configured_harnesses` is absent or `null` (the session has
   no bound host, or the readiness lookup failed), readiness is UNKNOWN — fall
   back to exactly ONE
-  `sys_os_shell("command -v claude codex pi || true")`
+  `sys_os_shell("command -v claude codex || true")`
   and treat a worker as available only if its binary resolved there. The
   fallback is weaker (a shell PATH probe cannot see auth state), so a
   fallback-approved worker may still fail loud at dispatch — read that error,
