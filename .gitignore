@@ -1,0 +1,41 @@
+# macOS / Finder junk
+.DS_Store
+._*
+
+# Secrets & credentials — never commit these
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+.netrc
+.npmrc
+.pypirc
+.databrickscfg
+.databricks/
+
+# Agent runtime state (generated at run time, not part of the agent)
+.foreman/
+.worktrees/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Logs
+*.log
+logs/
+
+# Editors
+.idea/
+.vscode/
+
+# Node (in case a worker drops one in)
+node_modules/
