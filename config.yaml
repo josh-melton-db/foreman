@@ -17,11 +17,11 @@ spawn: true
 
 # Orchestrator "brain": Claude Agent SDK. foreman writes no code itself — it
 # delegates ALL coding work (investigation, implementation, review) to the
-# claude_code / codex / deepseek sub-agents, doing only non-code authoring (docs /
+# claude_code / codex / flash sub-agents, doing only non-code authoring (docs /
 # Markdown / text edits, skills) itself. The brain is pinned to the latest
 # Claude Opus the local Databricks gateway serves. Pinning the brain also pins
-# the family its workers are routed within, so the codex / deepseek sub-agents carry
-# their own explicit models (see agents/codex and agents/deepseek).
+# the family its workers are routed within, so the codex / flash sub-agents carry
+# their own explicit models (see agents/codex and agents/flash).
 executor:
   type: omnigent
   # Pinned to the latest Claude Opus available on the local Databricks gateway
@@ -59,7 +59,7 @@ prompt: |
   - `claude_code` — Claude Code (`claude-native` harness). Own terminal — the
     human can open it in the UI's Subagents panel and watch or TAKE OVER.
   - `codex` — Codex (`codex-native` harness). Own terminal, same as above.
-  - `deepseek` — DeepSeek (`codex-native` harness), the fast-task / REVIEW /
+  - `flash` — DeepSeek Flash (`codex-native` harness), the fast-task / REVIEW /
     EXPLORE specialist — read-mostly work plus fast tasks. Shares the codex CLI
     but runs a different model, i.e. a different vendor.
 
@@ -70,7 +70,7 @@ prompt: |
   anything, run exactly ONE `sys_session_get_info({})` and read its
   `configured_harnesses` map — the bound host's authoritative readiness report.
   Map workers to readiness keys as follows: `claude_code` -> `claude-native`,
-  `codex` -> `codex-native`, and `deepseek` -> `codex-native` (it rides the codex
+  `codex` -> `codex-native`, and `flash` -> `codex-native` (it rides the codex
   harness). A worker is AVAILABLE only
   when its readiness value is exactly `true` — every other value (`false`,
   `"binary-missing"`, `"needs-auth"`, `"version-too-low"`) means it cannot boot
@@ -123,7 +123,7 @@ prompt: |
     Name the sub-agent session for the work it is doing, not for the
     vendor/harness. Good titles look like `auth-refactor`,
     `fix-sse-error`, `review-auth-refactor`, or `explore-ci-flake`.
-    Bad titles are `claude_code`, `claude-code`, `codex`, `deepseek`, `worker`, and
+    Bad titles are `claude_code`, `claude-code`, `codex`, `flash`, `worker`, and
     other generic agent/vendor names. Reuse the same title only when you are
     continuing that exact task's existing sub-agent conversation.
   - `args.purpose` — one of:
@@ -142,7 +142,7 @@ prompt: |
   first non-whitespace token; put the full `IMPLEMENT` task, worktree path,
   acceptance contract, required green gates, and PR requirement inside the
   condition. Do not use child goal mode for `review`, `explore`, or `search`,
-  or for `deepseek`. Goal mode is expressed in
+  or for `flash`. Goal mode is expressed in
   the input command — do not invent a `sys_session_send` goal parameter.
 
   Treat real investigation as delegated work. If the human asks you to
@@ -168,17 +168,17 @@ prompt: |
   A code change is `implement` — route it to a coding sub-agent, even for a
   one-line edit; there is no agent below them to route it to. A pure docs/text
   edit (no code) you make yourself per the rule above. If the human says
-  "launch agents", "use claude code", "use codex", or "use deepseek", that is a
+  "launch agents", "use claude code", "use codex", or "use flash", that is a
   literal instruction to dispatch them. `claude_code` and `codex` are the
   primary implementers — pick per task: `claude_code` for multi-file /
-  refactor / test-writing work, `codex` for complex tasks, and `deepseek` for fast
+  refactor / test-writing work, `codex` for complex tasks, and `flash` for fast
   tasks. Route `review` / `explore` / `search` tasks to
-  `deepseek` (or the other implementer, for a different-vendor second opinion) when
+  `flash` (or the other implementer, for a different-vendor second opinion) when
   a third perspective or a specific model is wanted.
 
   Cross-vendor verification is the point: review is ALWAYS done by a DIFFERENT
   vendor than the implementer — e.g. `claude_code`'s PR is reviewed by `codex`
-  or `deepseek`, and vice versa. Enforced: every `purpose: "review"` dispatch MUST set
+  or `flash`, and vice versa. Enforced: every `purpose: "review"` dispatch MUST set
   `args.vendor` (the reviewer's vendor token — `claude` / `gpt` / `glm` /
   `kimi` / `deepseek`) and `args.implemented_by` (the implementer's vendor
   token). The `cross_vendor_review_guard` policy DENIES a review whose `vendor`
@@ -223,7 +223,7 @@ prompt: |
   terminal via `sys_terminal_launch` (it accepts a `cwd` override so you can run
   it inside a per-task worktree). NEVER use this terminal to launch coding
   agents / sub-agents — all delegation goes through `sys_session_send` to
-  `claude_code` / `codex` / `deepseek`.
+  `claude_code` / `codex` / `flash`.
 
   For external context and deterministic status, use the `gh` CLI (via
   `sys_os_shell`) for github.com. Reach for such tools sparingly — only to
@@ -283,7 +283,7 @@ prompt: |
     useful, cancel it instead of leaving it running while you re-dispatch. Call
     `sys_cancel_task` with `task_id` set to that sub-agent's recorded
     `conversation_id`. `claude_code` workers are hard-stopped and will wake you
-    with a cancelled inbox item; `deepseek` workers honor the interrupt and stop;
+    with a cancelled inbox item; `flash` workers honor the interrupt and stop;
     `codex` cancellation is currently best-effort; do not assume the worker is
     gone unless the tool result or inbox confirms it.
   - Do not repeatedly re-prompt a dark or failing sub-agent. For coding work,
@@ -335,7 +335,7 @@ terminals:
 
 tools:
   # Coding sub-agents — see agents/<dir>/. claude_code and codex are real CLI
-  # coding harnesses; deepseek rides the codex harness on a DeepSeek model. Each
+  # coding harnesses; flash rides the codex harness on a DeepSeek model. Each
   # reviews (cross-vendor), and explores. opencode / cursor / hermes / agy are
   # commented out for now — those harnesses aren't set up on this machine.
   agents:
@@ -345,7 +345,7 @@ tools:
     # - cursor
     # - hermes
     # - agy
-    - deepseek
+    - flash
 
 # Mechanism-layer enforcement — runner-side tool gate, no server change.
 guardrails:
