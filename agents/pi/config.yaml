@@ -1,16 +1,19 @@
 spec_version: 1
 name: pi
-description: Pi coding sub-agent — the multi-model third worker; reviews, explores, or implements a scoped task headlessly, on any gateway model picked per dispatch.
+description: Pi coding sub-agent — the multi-model third worker; reviews, explores, or implements a scoped task in its own worktree, on a gateway model the other workers don't run.
 
-# Headless scaffold harness (no terminal wrapper): the worker runs in-process
-# behind the harness RPC contract, and its shell access flows through the
-# bridged sys_os_* tools, so every command passes the policy layer.
+# Runs on the codex harness (the same CLI the codex worker uses) instead of a
+# separate `pi` CLI, so the deployment only maintains two vendor harnesses
+# (claude + codex). DeepSeek is the distinct third vendor.
 executor:
   type: omnigent
   # Pinned to the latest DeepSeek Flash the local gateway serves.
   model: system.ai.deepseek-v4-1-flash
   config:
-    harness: pi
+    harness: codex-native
+    # Headless workers can't answer approval prompts; full bypass, like the
+    # codex worker.
+    yolo: true
 
 prompt: |
   You are Pi, a coding sub-agent dispatched by the foreman
