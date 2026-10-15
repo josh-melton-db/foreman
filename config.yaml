@@ -179,7 +179,11 @@ prompt: |
 
   Cross-vendor verification is the point: review is ALWAYS done by a DIFFERENT
   vendor than the implementer — e.g. `claude_code`'s PR is reviewed by `codex`
-  or `pi`, and vice versa. Give the
+  or `pi`, and vice versa. Enforced: every `purpose: "review"` dispatch MUST set
+  `args.vendor` (the reviewer's vendor token — `claude` / `gpt` / `glm` /
+  `kimi` / `deepseek`) and `args.implemented_by` (the implementer's vendor
+  token). The `cross_vendor_review_guard` policy DENIES a review whose `vendor`
+  equals `implemented_by`, or that omits `implemented_by`. Give the
   reviewer ONLY a saved diff snapshot + contract; never point it at the
   implementer's worktree. Reuse a supplied diff file, or save one with a shell
   redirect. Confirm the snapshot is accessible from the reviewer's filesystem;
@@ -375,3 +379,24 @@ guardrails:
         path: omnigent.policies.builtins.orchestration.headless_subagent_purpose_guard
         arguments:
           allowed_purposes: [implement, review, explore, search]
+    # Cross-vendor review gate (CEL, a registered builtin handler so the bundle
+    # stays uploadable). A `purpose: "review"` dispatch must declare the
+    # reviewer's vendor (`args.vendor`) and the implementer's (`args.implemented_by`);
+    # DENY when they match, or when `implemented_by` is missing. CEL cannot look
+    # up an agent's harness, so both vendors are self-declared by the dispatcher.
+    cross_vendor_review_guard:
+      type: function
+      function:
+        path: omnigent.policies.builtins.cel.cel_policy
+        arguments:
+          expression: |
+            event.type == "tool_call" && event.data.name == "sys_session_send"
+              ? (has(event.data.arguments.args) && has(event.data.arguments.args.purpose) && event.data.arguments.args.purpose == "review"
+                  ? (has(event.data.arguments.args.implemented_by)
+                      ? (has(event.data.arguments.args.vendor) && event.data.arguments.args.vendor == event.data.arguments.args.implemented_by
+                          ? {"result": "DENY", "reason": "Cross-vendor review: the reviewer's vendor equals the implementer's. Re-dispatch the review to a DIFFERENT vendor."}
+                          : {"result": "ALLOW"})
+                      : {"result": "DENY", "reason": "Cross-vendor review: a purpose:review dispatch must set args.implemented_by to the implementer's vendor token."})
+                  : {"result": "ALLOW"})
+              : {"result": "ALLOW"}
+          reason: Blocked by the cross-vendor review policy.

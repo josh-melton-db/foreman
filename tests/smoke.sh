@@ -43,6 +43,9 @@ check("name", spec.name, "foreman")
 check("tools.agents", list(spec.tools.agents), ["claude_code", "codex", "pi"])
 check("brain model", spec.executor.model, "databricks-claude-opus-5-5")
 
+guards = {g.name for g in (spec.guardrails.policies or [])}
+check("guardrail present", "cross_vendor_review_guard" in guards, True)
+
 # A pinned `databricks-` model needs the gateway transport enabled, which the
 # spec's auth block provides. Without it the brain fails to launch.
 auth = spec.executor.auth

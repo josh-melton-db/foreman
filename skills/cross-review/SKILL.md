@@ -31,7 +31,8 @@ anyone needs to read through.
    `pi` (e.g. Claude built it → `codex` or `pi`, and so on). Use a
    task-based title such as `review-auth-refactor`, never the raw vendor name:
    `sys_session_send(agent="claude_code"|"codex"|"pi", title="review-<task_slug>",
-   args={purpose: "review", input: "Read the diff at <absolute shared diff path>
+   args={purpose: "review", vendor: "<reviewer vendor token>",
+   implemented_by: "<implementer vendor token>", input: "Read the diff at <absolute shared diff path>
    (base <base-sha>, head <head-sha>). <The acceptance contract>.
    Review ONLY against the contract. Report blocking / non-blocking /
    suggestions. Do not edit code. If the snapshot is inaccessible, report that
