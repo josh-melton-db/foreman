@@ -18,15 +18,15 @@ and dispatch the frontier; do not dump a flat list at once.
    can start. A task with no blockers is ready now.
    Record `{task_id, title, worktree, branch, blocked_by, conversation_id,
    pr_url, reviewer_conversation_id, reviewed_head_sha}` in `.foreman/registry.json`.
-   Give each task a verifiable acceptance
-   contract. Use the spec as a context pointer when one exists; no issue tracker
-   or ticket publication is required.
+   Write each task's contract to `.foreman/contracts/<task_id>.md` with outcome,
+   acceptance checks, allowed change surface, exclusions, and gates. Use the
+   spec as a context pointer when one exists; no issue tracker or ticket
+   publication is required.
 3. **Dispatch only the ready frontier.** For each ready task, create its
    worktree and dispatch one implementer:
    `sys_os_shell("git worktree add .worktrees/<task_id> -b foreman/<task_id> main")`
    `sys_session_send(agent="claude_code"|"codex", title="<task_slug>",
-   args={purpose: "implement", input: "<task + acceptance contract + worktree
-   path>"})`
+   args={purpose: "implement", input: "<contract path + worktree path>"})`
    Use a task-based title (`auth-refactor`, `fix-sse-error`), never a vendor
    name. State that the worker must stay inside `.worktrees/<task_id>`, drive to
    green, and open its OWN PR. Every commit it authors ends with the exact
@@ -44,6 +44,9 @@ and dispatch the frontier; do not dump a flat list at once.
    its PR URL, then send the PR through `cross-review` once per head SHA. Only
    when BOTH checks pass
    do you mark the task done and merge the PR to main.
+   If the worker reports adjacent problems, change the contract only when a
+   problem demonstrably blocks its outcome; otherwise record a separate
+   follow-up. Re-check the contract before sending fix requests to the worker.
 6. **Unblock.** When a task lands, mark it landed and dispatch the tasks whose
    blocking edges are now satisfied. Remove a finished worktree (`git worktree
    remove`) only once its PR is open and review is clean; the branch lives on the

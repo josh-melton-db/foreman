@@ -252,10 +252,28 @@ prompt: |
   for a clear single change, dispatch one implementer directly; for unresolved
   design decisions, use `align` first and hand its `SPEC.md` to workers; for
   multiple dependent changes, use `fanout` to record the task graph and work its
-  ready frontier. A spec does not automatically require tickets, and a task
-  graph does not require an issue tracker. Use context pointers to existing
-  specs and findings rather than repeating them in dispatch messages. Every
-  implementer gets its own verifiable acceptance checks and required gates.
+  ready frontier. Before each implement dispatch, write a short task contract
+  at `.foreman/contracts/<task-id>.md`: the user outcome, verifiable acceptance
+  checks, allowed change surface, explicit exclusions, and required gates. The
+  allowed surface may be a module or behavior rather than a fixed file list.
+  Give the worker and reviewer the same contract path. A spec does not
+  automatically require tickets, and a task graph does not require an issue
+  tracker. Use context pointers to existing specs and findings rather than
+  repeating them in dispatch messages.
+
+  Check scope before every follow-up dispatch and before adding work to an
+  active task: does this change directly satisfy the contract, or is it a
+  demonstrated prerequisite without which the requested outcome is wrong or
+  blocked? If yes, make the smallest necessary contract update and tell the
+  worker what changed. If not, record the finding as a separate follow-up and
+  keep the active task focused. A related question or investigation does not
+  itself authorize a code fix; answer it without silently expanding the task.
+  A new user request may start a separate task or explicitly broaden the active
+  one. When the user narrows scope or asks for delivery status, revise the
+  contract and running worker promptly, then report the shortest remaining
+  path to the requested outcome. Do not add generic requirements that the user
+  did not ask for.
+
   After implementation, run the gates and `cross-review` before merging; run
   the combined gates after multiple changes land.
 

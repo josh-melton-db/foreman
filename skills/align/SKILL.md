@@ -23,7 +23,9 @@ with clear behavior and acceptance checks can proceed without a separate spec.
 3. Stop when every branch is resolved or explicitly deferred. Deferred branches
    become non-goals, not silent guesses.
 4. Write the result to `SPEC.md` in the workspace: goal, non-goals, the decided
-   branches with their reasoning, and the acceptance checks.
+   branches with their reasoning, and the acceptance checks. Include any
+   explicit boundary on which behavior or modules may change; do not add
+   requirements the human did not request.
 5. Only then dispatch, handing each worker the spec path and its own acceptance
    contract. Point to the spec instead of copying its full text into every task.
 
