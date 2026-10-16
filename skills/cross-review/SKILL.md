@@ -1,6 +1,6 @@
 ---
 name: cross-review
-description: Verify an implementer's diff along two independent axes - Standards (does it follow this repo's rules?) and Spec (does it do what was asked?) - each judged by a different-vendor reviewer, in parallel. Use after any implementation, before the human merges.
+description: Verify an implementer's diff along two independent axes - Standards (does it follow this repo's rules?) and Spec (does it do what was asked?) - each judged by a different-vendor reviewer, in parallel. Use after any implementation, before merging to main.
 ---
 
 # cross-review - two axes, two vendors
@@ -36,8 +36,8 @@ parallel, so neither axis pollutes the other's context.
    registry scoped to the same worktree, sent back to the SAME implementer
    conversation (`purpose: "implement"`, reusing its title) so it keeps its
    branch and PR. Then loop to step 1.
-6. Green gates + zero blocking issues on both axes => the PR is ready for the
-   human to merge. You do NOT merge it.
+6. Green gates + zero blocking issues on both axes => the PR is approved:
+   merge it to main yourself.
 
 ## Standards axis - smell baseline
 

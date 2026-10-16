@@ -17,10 +17,12 @@ and dispatch the frontier; do not dump a flat list at once.
 2. **Declare each task's blocking edges** - the tasks that must land before it
    can start. A task with no blockers is ready now.
    Record `{task_id, title, worktree, branch, blocked_by, conversation_id,
-   pr_url}` in `.foreman/registry.json`.
+   pr_url}` in `.foreman/registry.json`. Give each task a verifiable acceptance
+   contract. Use the spec as a context pointer when one exists; no issue tracker
+   or ticket publication is required.
 3. **Dispatch only the ready frontier.** For each ready task, create its
    worktree and dispatch one implementer:
-   `sys_os_shell("git worktree add .worktrees/<task_id> -b foreman/<task_id>")`
+   `sys_os_shell("git worktree add .worktrees/<task_id> -b foreman/<task_id> main")`
    `sys_session_send(agent="claude_code"|"codex", title="<task_slug>",
    args={purpose: "implement", input: "<task + acceptance contract + worktree
    path>"})`
@@ -28,8 +30,10 @@ and dispatch the frontier; do not dump a flat list at once.
    name. State that the worker must stay inside `.worktrees/<task_id>`, drive to
    green, and open its OWN PR. Every commit it authors ends with the exact
    co-sign trailer `Co-authored-by: omnigent <noreply@omnigent.ai>`.
-   For a long-running `claude_code` or `codex` task with an explicit completion
-   condition, `input` may be one standalone `/goal <condition>` holding the same
+   Refresh `main` before creating the worktree. Dependent tasks start only
+   after their blockers land; tell each worker to check its branch base before
+   editing. For a long-running `claude_code` or `codex` task with an explicit
+   completion condition, `input` may be one standalone `/goal <condition>` holding the same
    task, worktree, contract, gates, and PR requirement. Never for `flash`, and
    never for review/explore.
 4. **Respect the per-turn cap** (policy-enforced). More ready tasks than the cap
@@ -37,14 +41,14 @@ and dispatch the frontier; do not dump a flat list at once.
    A task whose blockers have not landed is NOT ready - hold it.
 5. **Collect and close out.** Each worker notifies you through the inbox; record
    its PR URL, then send the PR through `cross-review`. Only when BOTH axes pass
-   do you mark the task done - and never merge.
+   do you mark the task done and merge the PR to main.
 6. **Unblock.** When a task lands, mark it landed and dispatch the tasks whose
    blocking edges are now satisfied. Remove a finished worktree (`git worktree
    remove`) only once its PR is open and review is clean; the branch lives on the
    remote.
 7. **Integrate.** When the slice set is complete, verify the combined result on
-   the integration point (the base branch or an integration branch) - the whole
-   is not green just because every slice was.
+   main with the full relevant gates - the whole is not green just because
+   every slice was.
 
 ## Notes
 
@@ -56,5 +60,5 @@ and dispatch the frontier; do not dump a flat list at once.
   best-effort.
 - A dark or failing worker: re-dispatch a FRESH implementer in a clean worktree,
   or escalate - do not loop on it.
-- Because you never merge, cross-PR conflicts surface when the human merges.
+- Because merges are yours to make, cross-PR conflicts surface as you merge.
   Keeping parallel tasks' file scope disjoint is what keeps that rare.

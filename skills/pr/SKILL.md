@@ -1,12 +1,12 @@
 ---
 name: pr
-description: The shape a pull request body should take - smallest clear visual, before/after evidence, and a merge-danger call. Use when an implementer opens a PR, or when you assess one for the human.
+description: The shape a pull request body should take - smallest clear visual, before/after evidence, and a merge-danger call. Use when an implementer opens a PR, or when you assess one before merging.
 ---
 
 # pr - the deliverable is the pull request
 
-An implementer opens its own PR; you never merge it. Require this shape, and
-enforce it at review.
+An implementer opens its own PR; once it passes review you merge it. Require
+this shape, and enforce it at review.
 
 ## Body
 

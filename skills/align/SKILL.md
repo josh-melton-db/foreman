@@ -1,17 +1,17 @@
 ---
 name: align
-description: Resolve the design before delegating — interrogate the human until every branch of the design tree is settled, then write a short spec the workers implement without guessing. Use when a goal is under-specified or has open design branches.
+description: Resolve open design decisions before delegating, then write a short spec with acceptance checks. Use when those decisions would change the build.
 ---
 
 # align - resolve the design before delegating
 
 Fixes the most common failure mode: you build the wrong thing confidently. Use
-when the goal is a one-liner, the plan has open decisions, or you are about to
-fan out more than one worker behind a guess.
+when the plan has open decisions that would change the build. A short request
+with clear behavior and acceptance checks can proceed without a separate spec.
 
 ## Procedure
 
-1. Restate the goal in one sentence and say what you will NOT do.
+1. Restate the goal and identify the decisions that would change the build.
 2. Walk the design tree - ask, in batches of at most four, about the branches
    that actually change the build:
    - scope and non-goals; what is out of bounds
@@ -24,7 +24,8 @@ fan out more than one worker behind a guess.
    become non-goals, not silent guesses.
 4. Write the result to `SPEC.md` in the workspace: goal, non-goals, the decided
    branches with their reasoning, and the acceptance checks.
-5. Only then dispatch, handing each worker the spec path.
+5. Only then dispatch, handing each worker the spec path and its own acceptance
+   contract. Point to the spec instead of copying its full text into every task.
 
 This is a gate, not a stall: if the human says "just do it", record the defaults
 you assumed and proceed. One round is often enough; do not interrogate past the
