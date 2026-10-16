@@ -1,13 +1,13 @@
 ---
 name: cross-review
-description: Verify an implementer's diff along two independent axes - Standards (does it follow this repo's rules?) and Spec (does it do what was asked?) - each judged by a different-vendor reviewer, in parallel. Use after any implementation, before merging to main.
+description: Have one different-vendor reviewer check an implementer's diff for Standards and Spec conformance. Use after implementation, before merging to main.
 ---
 
-# cross-review - two axes, two vendors
+# cross-review - one reviewer, two checks
 
-The implementer never signs off on its own work. Press review along **two
-independent axes**, each run by a DIFFERENT vendor than the implementer, in
-parallel, so neither axis pollutes the other's context.
+The implementer never signs off on its own work. Assign exactly ONE reviewer
+from a DIFFERENT vendor to check both **Standards** and **Spec**. Do not send
+duplicate reviews of the same ticket and head commit.
 
 ## Procedure
 
@@ -24,19 +24,21 @@ parallel, so neither axis pollutes the other's context.
    - Standards: every file that documents how code is written here
      (`CONTRIBUTING.md`, `CODING_STANDARDS.md`, lint config), plus the smell
      baseline below.
-4. **Dispatch BOTH reviewers in parallel**, each tagged and each a different
-   vendor from the implementer:
-   `sys_session_send(agent="claude_code"|"codex"|"flash", title="review-standards-<slug>",
-   args={purpose: "review", input: "..."})`
-   and the same with `title="review-spec-<slug>"`.
-   Give each ONLY the snapshot path plus its inputs - never the implementer's
-   worktree or transcript. Instruct: report blocking / non-blocking /
-   suggestions, each with file:line evidence; do not edit code.
-5. **Aggregate.** A blocking issue from either axis becomes a fix-task on the
-   registry scoped to the same worktree, sent back to the SAME implementer
-   conversation (`purpose: "implement"`, reusing its title) so it keeps its
-   branch and PR. Then loop to step 1.
-6. Green gates + zero blocking issues on both axes => the PR is approved:
+4. **Dispatch one reviewer** from a different vendor than the implementer:
+   `sys_session_send(agent="claude_code"|"codex"|"flash", title="review-<slug>",
+   args={purpose: "review", input: "<snapshot path + base/head SHAs + contract + standards>"})`.
+   Give it ONLY the snapshot path and inputs - never the implementer's worktree
+   or transcript. Require separate Standards and Spec findings, each tagged
+   blocking / non-blocking / suggestion with file:line evidence, plus one verdict.
+   Record its conversation ID and the reviewed head SHA in the task registry.
+   If that SHA is already under review or has a verdict, do not dispatch again.
+5. **Resolve findings.** A blocking issue on either check becomes a fix-task on
+   the registry scoped to the same worktree, sent back to the SAME implementer
+   conversation (`purpose: "implement"`, reusing its title). After the fix,
+   repeat steps 1-3 on the NEW head SHA and continue the SAME reviewer
+   conversation with the fix diff. Never request another review of an unchanged
+   head SHA.
+6. Green gates + zero blocking issues on both checks => the PR is approved:
    merge it to main yourself.
 
 ## Standards axis - smell baseline

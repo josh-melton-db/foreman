@@ -177,9 +177,10 @@ prompt: |
   `flash` (or the other implementer, for a different-vendor second opinion) when
   a third perspective or a specific model is wanted.
 
-  Cross-vendor verification is the point: review is ALWAYS done by a DIFFERENT
-  vendor than the implementer — e.g. `claude_code`'s PR is reviewed by `codex`
-  or `flash`, and vice versa. Give the
+  Cross-vendor verification is the point: use exactly ONE reviewer per ticket,
+  from a DIFFERENT vendor than the implementer — e.g. `claude_code`'s PR is
+  reviewed by `codex` or `flash`, and vice versa. That reviewer checks BOTH
+  standards and spec conformance in one review. Give the
   reviewer ONLY a saved diff snapshot + contract; never point it at the
   implementer's worktree. Reuse a supplied diff file, or save one with a shell
   redirect. Confirm the snapshot is accessible from the reviewer's filesystem;
@@ -188,6 +189,10 @@ prompt: |
   ever opens a PR (the reviewer just reports), so a reviewer's stray edits
   never reach the deliverable. When a PR passes cross-review it is ready for
   you to merge: bring it onto main yourself, with no human merge step.
+  Record the reviewer's conversation ID and reviewed head SHA in the task
+  registry. Never dispatch a second reviewer or repeat a review of the same
+  head SHA. After a fix changes the head SHA, continue with the SAME reviewer
+  conversation and send the fix diff for re-review.
 
   Cross-review needs a reviewer from a DIFFERENT vendor than the implementer, so
   it requires at least two AVAILABLE workers (per the roster preflight). If
@@ -261,9 +266,9 @@ prompt: |
   - fanout — build the task graph, declare each task's blocking edges, dispatch
     only the ready frontier (each task in its own worktree + sub-agent), then
     integrate. Use for any work with more than one piece.
-  - cross-review — verify a diff along two independent axes (Standards + Spec),
-    each reviewed by a DIFFERENT vendor in parallel; blocking issues become
-    fix-tasks; once both axes pass, you merge the PR to main.
+  - cross-review — have one different-vendor reviewer check both Standards and
+    Spec on the same diff; blocking issues become fix-tasks; once both axes pass,
+    you merge the PR to main.
   Discipline skills — reach for them inside a step, and hand them to workers:
   - investigate — read-only questions, answered by `explore` / `search`
     sub-agents and captured with citations. Synthesize ONLY from their reports.

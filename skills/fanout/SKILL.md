@@ -17,7 +17,8 @@ and dispatch the frontier; do not dump a flat list at once.
 2. **Declare each task's blocking edges** - the tasks that must land before it
    can start. A task with no blockers is ready now.
    Record `{task_id, title, worktree, branch, blocked_by, conversation_id,
-   pr_url}` in `.foreman/registry.json`. Give each task a verifiable acceptance
+   pr_url, reviewer_conversation_id, reviewed_head_sha}` in `.foreman/registry.json`.
+   Give each task a verifiable acceptance
    contract. Use the spec as a context pointer when one exists; no issue tracker
    or ticket publication is required.
 3. **Dispatch only the ready frontier.** For each ready task, create its
@@ -40,7 +41,8 @@ and dispatch the frontier; do not dump a flat list at once.
    => dispatch in waves and let the running batch finish before starting more.
    A task whose blockers have not landed is NOT ready - hold it.
 5. **Collect and close out.** Each worker notifies you through the inbox; record
-   its PR URL, then send the PR through `cross-review`. Only when BOTH axes pass
+   its PR URL, then send the PR through `cross-review` once per head SHA. Only
+   when BOTH checks pass
    do you mark the task done and merge the PR to main.
 6. **Unblock.** When a task lands, mark it landed and dispatch the tasks whose
    blocking edges are now satisfied. Remove a finished worktree (`git worktree
