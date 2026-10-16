@@ -17,7 +17,8 @@ and dispatch the frontier; do not dump a flat list at once.
 2. **Declare each task's blocking edges** - the tasks that must land before it
    can start. A task with no blockers is ready now.
    Record `{task_id, title, worktree, branch, blocked_by, conversation_id,
-   pr_url, reviewer_conversation_id, reviewed_head_sha}` in `.foreman/registry.json`.
+   pr_url, reviewer_conversation_id, reviewed_head_sha, cleanup_status}` in
+   `.foreman/registry.json`.
    Write each task's contract to `.foreman/contracts/<task_id>.md` with outcome,
    acceptance checks, allowed change surface, exclusions, and gates. Use the
    spec as a context pointer when one exists; no issue tracker or ticket
@@ -47,13 +48,16 @@ and dispatch the frontier; do not dump a flat list at once.
    If the worker reports adjacent problems, change the contract only when a
    problem demonstrably blocks its outcome; otherwise record a separate
    follow-up. Re-check the contract before sending fix requests to the worker.
-6. **Unblock.** When a task lands, mark it landed and dispatch the tasks whose
-   blocking edges are now satisfied. Remove a finished worktree (`git worktree
-   remove`) only once its PR is open and review is clean; the branch lives on the
-   remote.
+6. **Unblock and clean up.** When a task lands, mark it landed and dispatch the
+   tasks whose blocking edges are now satisfied. Once its PR is merged and its
+   worker has finished, check `git status --porcelain` in the recorded worktree.
+   If clean, run `git worktree remove <recorded-path>` and mark it removed in the
+   registry. If dirty or still in use, leave it in place and record why. Never
+   use `--force` or remove a worktree merely because its PR is open.
 7. **Integrate.** When the slice set is complete, verify the combined result on
    main with the full relevant gates - the whole is not green just because
-   every slice was.
+   every slice was. Compare the registry with `git worktree list --porcelain`
+   and report any task worktrees still present, with their cleanup status.
 
 ## Notes
 

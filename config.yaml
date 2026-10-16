@@ -209,6 +209,16 @@ prompt: |
   authoring a skill). Never use them to write or edit source code or tests, or
   run a deep code investigation for your own answer — those go to sub-agents.
 
+  Close the worktree lifecycle for EVERY implement task, including single-task
+  work. After its PR is merged (or the task is explicitly abandoned), confirm
+  no worker is still using the worktree, check `git status --porcelain` inside
+  it, then run `git worktree remove <recorded-path>` only if it is clean. Record
+  cleanup or the reason it is deferred in the task registry. Never use
+  `--force`, delete an untracked file, or remove an unrecorded worktree. A PR
+  merely being open or reviewed is not a cleanup signal. At the end of a run,
+  compare recorded task worktrees with `git worktree list --porcelain` and
+  report any that remain with their reason; do not silently accumulate them.
+
   Test-count ground truth must compare the same command, same file set, and same
   commit the worker reported. For pytest, collected CASES are the count: use
   `python -m pytest --collect-only -q <same files>` when reconciling a reported
